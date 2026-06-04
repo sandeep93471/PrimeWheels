@@ -1,0 +1,48 @@
+services:
+  mongo:
+    image: mongo:6.0
+    container_name: primewheels-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: primewheels
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: primewheels-redis
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: primewheels-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://mongo:27017/primewheels
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongo
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: primewheels-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongo-data:
