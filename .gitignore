@@ -25,3 +25,7 @@ CLAUDE.md
 *.sln
 *.sw?
 .env
+
+# local tooling + assets (not for repo)
+car-images/
+backend/scripts/
