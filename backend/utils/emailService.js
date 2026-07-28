@@ -15,15 +15,38 @@ const transporter = nodemailer.createTransport({
     socketTimeout: 20000,
 });
 
+const sendViaBrevoApi = async (to, subject, text) => {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+            "api-key": process.env.BREVO_API_KEY,
+            "content-type": "application/json",
+        },
+        body: JSON.stringify({
+            sender: { email: process.env.EMAIL_FROM || process.env.EMAIL_USER },
+            to: [{ email: to }],
+            subject,
+            textContent: text,
+        }),
+    });
+    if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`brevo api ${res.status}: ${body.slice(0, 300)}`);
+    }
+};
+
 export const sendEmail = async (to, subject, text) => {
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to,
-        subject,
-        text,
-    };
     try {
-        await transporter.sendMail(mailOptions);
+        if (process.env.BREVO_API_KEY) {
+            await sendViaBrevoApi(to, subject, text);
+            return;
+        }
+        await transporter.sendMail({
+            from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+            to,
+            subject,
+            text,
+        });
     } catch (err) {
         console.error("[email] send failed:", err.message);
         throw err;
