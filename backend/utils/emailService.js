@@ -15,6 +15,26 @@ const transporter = nodemailer.createTransport({
     socketTimeout: 20000,
 });
 
+const sendViaResend = async (to, subject, text) => {
+    const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+            "content-type": "application/json",
+        },
+        body: JSON.stringify({
+            from: process.env.RESEND_FROM || "onboarding@resend.dev",
+            to: [to],
+            subject,
+            text,
+        }),
+    });
+    if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`resend api ${res.status}: ${body.slice(0, 300)}`);
+    }
+};
+
 const sendViaBrevoApi = async (to, subject, text) => {
     const res = await fetch("https://api.brevo.com/v3/smtp/email", {
         method: "POST",
@@ -37,6 +57,10 @@ const sendViaBrevoApi = async (to, subject, text) => {
 
 export const sendEmail = async (to, subject, text) => {
     try {
+        if (process.env.RESEND_API_KEY) {
+            await sendViaResend(to, subject, text);
+            return;
+        }
         if (process.env.BREVO_API_KEY) {
             await sendViaBrevoApi(to, subject, text);
             return;
